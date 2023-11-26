@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("StudPortal.Server")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b8adc94ed0502f1fbd531fe9fddfd4fd1fabe775")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+79ddd05964d1cc3a57a89cc186160bab70fb7db8")]
 [assembly: System.Reflection.AssemblyProductAttribute("StudPortal.Server")]
 [assembly: System.Reflection.AssemblyTitleAttribute("StudPortal.Server")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

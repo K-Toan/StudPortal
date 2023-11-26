@@ -7,6 +7,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using StudPortal.Server.Models;
 using StudPortal.Server.ViewModels;
+using Microsoft.Extensions.Configuration;
+using StudPortal.Server.Helpers;
+using StudPortal.Server.Services.AccountService;
 
 namespace StudPortal.Server.Controllers
 {
@@ -14,102 +17,101 @@ namespace StudPortal.Server.Controllers
     [ApiController]
     public class AuthController : ControllerBase
     {
-        public static Account acc = new Account();
-        private readonly IConfiguration _config;
+        private static HashHelper _hashHelper;
+        private readonly IAccountService _accountService;
 
-        public AuthController(IConfiguration config)
+        public AuthController(IConfiguration config, IAccountService accountService)
         {
-            _config = config;
+            _accountService = accountService;
+            _hashHelper = new HashHelper();
         }
 
         [HttpPost("login")]
-        public async Task<ActionResult<Account>> Login(AccountViewModel request)
+        public async Task<ActionResult<Account>> Login(LoginViewModel request)
         {
-            if(acc.Username != request.Username)
+            // Handle invalid model / invalid information
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            Account loginAccount = _accountService.GetAccountByUsername(request.Username);
+
+            // Handle username not exist
+            if (loginAccount == null)
             {
                 return BadRequest("Username not found!");
             }
 
-            if(!VerifyPasswordHash(request.Password, acc.PasswordHash, acc.PasswordSalt))
+            // Handle Wrong request password
+            if(!_hashHelper.VerifyPasswordHash(request.Password, loginAccount.PasswordHash, loginAccount.PasswordSalt))
             {
                 return BadRequest("Wrong password!");
             }
 
-            string token = CreateToken(acc);
-
-            //var refreshToken = GenerateRefreshToken();
-            //SetRefreshToken(refreshToken);
+            // Generate token
+            // This token hold account information(Id, full name, role)
+            string token = _hashHelper.CreateToken(loginAccount);
 
             return Ok(token);
         }
 
         [HttpPost("register")]
-        public async Task<ActionResult<Account>> Register(AccountViewModel request)
+        public async Task<ActionResult<Account>> Register(RegisterViewModel request)
         {
-            CreatePasswordHash(request.Password, out byte[] passwordHash, out byte[] passwordSalt);
-
-            acc.Username = request.Username;
-            acc.PasswordHash = passwordHash;
-            acc.PasswordSalt = passwordSalt;
-
-            return Ok(acc);
-        }
-        private void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
-        {
-            using (var hmac = new HMACSHA512())
+            // Handle invalid model / invalid information
+            if (!ModelState.IsValid)
             {
-                // A random string is added for endcrypting password
-                passwordSalt = hmac.Key;
-
-                // Encrypte password
-                passwordHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
+                return BadRequest(ModelState);
             }
-        }
 
-        private bool VerifyPasswordHash(string password, byte[] passwordHash, byte[] passwordSalt)
-        {
-            using(var hmac = new HMACSHA512(passwordSalt))
+            // Handle existed account case
+            if (_accountService.GetAccountByUsername(request.Username) != null)
             {
-                // Hashing requested password
-                var computeHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
-
-                // Compare with stored hashpassword
-                return computeHash.SequenceEqual(passwordHash);
+                return BadRequest("Username existed!");
             }
-        }
 
-        private byte[] GenerateRandomKey(int sizeInBits)
-        {
-            using (var rng = new RNGCryptoServiceProvider())
+            // Handle repeat password not match password case
+            if (request.Password != request.RepeatPassword)
             {
-                var key = new byte[sizeInBits / 8];
-                rng.GetBytes(key);
-                return key;
+                return BadRequest("Repeat Password must match your Password!");
             }
-        }
+            
+            // Hash Password, out passwordHash and passwordSalt 
+            _hashHelper.CreatePasswordHash(request.Password, out byte[] passwordHash, out byte[] passwordSalt);
 
-        private string CreateToken(Account acc)
-        {
-            List<Claim> claims = new List<Claim>()
+            // Generate new account model
+            Account registerAccount = new Account
             {
-                new Claim(ClaimTypes.Name, acc.Username),
-                new Claim(ClaimTypes.Role, "Admin")
+                Username = request.Username,
+                FirstName = request.FirstName,
+                LastName = request.LastName,
+                PasswordHash = passwordHash,
+                PasswordSalt = passwordSalt,
+                Role = "User"
             };
 
-            var key = new SymmetricSecurityKey(GenerateRandomKey(512));
+            // Add new register account to database
+            if (_accountService.Add(registerAccount))
+            {
+                return Ok(registerAccount);
+            }
+            else
+            {
+                return BadRequest("Cannot register!");
+            }
+        }
 
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
+        [HttpGet("clean")]
+        public async Task<ActionResult> Clean()
+        {
+            // Remove all existing accounts in database 
+            _accountService.Clean();
 
-            var token = new JwtSecurityToken
-            (
-                claims: claims,
-                expires: DateTime.Now.AddDays(1),
-                signingCredentials: creds
-            );
+            // Number of existing account after remove
+            int numberOfAcc = _accountService.GetAccountNumber();
 
-            var jwt = new JwtSecurityTokenHandler().WriteToken(token);
-
-            return jwt;
+            return Ok("Number of exsiting account: " + numberOfAcc);
         }
     }
 }
