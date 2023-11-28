@@ -13,7 +13,7 @@ using StudPortal.Server.Services.AccountService;
 
 namespace StudPortal.Server.Controllers
 {
-    [Route("api/controller")]
+    [Route("api/[controller]")]
     [ApiController]
     public class AuthController : ControllerBase
     {

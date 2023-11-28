@@ -57,8 +57,9 @@ builder.Services.AddCors(options =>
     options.AddPolicy
     (
         name: "AllowAnyOrigin",
-        builder => builder
-        .WithOrigins("http://localhost:4200") // Means localhost:4200 can request to this app
+        policy => policy
+        //.WithOrigins("http://localhost:4200") // Means localhost:4200 can request to this app
+        .AllowAnyOrigin()
         .AllowAnyMethod()
         .AllowAnyHeader()
     );
@@ -73,7 +74,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseCors();
+app.UseCors("AllowAnyOrigin");
 
 app.UseHttpsRedirection();
 
