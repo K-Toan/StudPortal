@@ -11,7 +11,7 @@ export class AuthService {
   constructor(private http: HttpClient) { }
 
   public register(account: Account): Observable<any> {
-    return this.http.post<any>('http://localhost:5250/api/Auth/login', account);
+    return this.http.post<any>('http://localhost:5250/api/Auth/register', account);
   }
 
   public login(account: Account): Observable<string> {
