@@ -51,6 +51,19 @@ builder.Services
         };
     });
 
+// Add Cors, allows other domains can request resource from this domain
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy
+    (
+        name: "AllowAnyOrigin",
+        builder => builder
+        .WithOrigins("http://localhost:4200") // Means localhost:4200 can request to this app
+        .AllowAnyMethod()
+        .AllowAnyHeader()
+    );
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -59,6 +72,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+app.UseCors();
 
 app.UseHttpsRedirection();
 

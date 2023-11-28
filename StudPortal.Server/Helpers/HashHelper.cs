@@ -37,6 +37,7 @@ namespace StudPortal.Server.Helpers
                 return computeHash.SequenceEqual(passwordHash);
             }
         }
+
         public byte[] GenerateRandomKey(int sizeInBits)
         {
             using (var rng = new RNGCryptoServiceProvider())
